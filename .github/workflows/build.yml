@@ -1,0 +1,35 @@
+name: Build APK
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unzip project
+        run: |
+          mkdir -p work
+          for z in *.zip; do unzip -q -o "$z" -d work; done
+          S=$(find work -name settings.gradle | head -1)
+          echo "APP_DIR=$(dirname "$S")" >> $GITHUB_ENV
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 11
+
+      - uses: android-actions/setup-android@v3
+
+      - run: sdkmanager "platforms;android-30" "build-tools;30.0.3"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 6.9.4
+
+      - name: Build
+        run: cd "$APP_DIR" && gradle assembleDebug --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SmartKeyboard-apk
+          path: work/**/app-debug.apk
